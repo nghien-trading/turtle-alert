@@ -3,7 +3,7 @@ name: Deploy to Self-Hosted Runner
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
