@@ -3,7 +3,7 @@ FROM oven/bun:latest AS build
 WORKDIR /app
 
 # Copy package descriptors first to leverage Docker cache
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Copy source code
