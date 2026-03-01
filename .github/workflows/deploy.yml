@@ -16,13 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create .env file
-        uses: spicywhale/create-env-file@v3.0.0
+        uses: SpicyPizza/create-envfile@v2.0.3
         with:
-          env_vars: |
-            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
-            SYMBOLS=${{ secrets.SYMBOLS }}
-            TIMEFRAME=${{ secrets.TIMEFRAME }}
-            RISK_PERCENT=${{ secrets.RISK_PERCENT }}
+          envkey_DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+          envkey_SYMBOLS=${{ secrets.SYMBOLS }}
+          envkey_TIMEFRAME=${{ secrets.TIMEFRAME }}
+          envkey_RISK_PERCENT=${{ secrets.RISK_PERCENT }}
 
       - name: Deploy with Docker Compose
         run: |
