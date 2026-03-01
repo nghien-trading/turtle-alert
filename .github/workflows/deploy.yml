@@ -1,0 +1,31 @@
+name: Deploy to Self-Hosted Runner
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted]
+    environment: deploy
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        uses: spicywhale/create-env-file@v3.0.0
+        with:
+          env_vars: |
+            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            SYMBOLS=${{ secrets.SYMBOLS }}
+            TIMEFRAME=${{ secrets.TIMEFRAME }}
+            RISK_PERCENT=${{ secrets.RISK_PERCENT }}
+
+      - name: Deploy with Docker Compose
+        run: |
+          docker-compose down || true
+          docker-compose up -d --build
+          docker image prune -f

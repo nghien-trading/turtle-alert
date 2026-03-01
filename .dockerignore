@@ -1,0 +1,8 @@
+node_modules
+.git
+.vscode
+.gemini
+*.log
+.dockerignore
+Dockerfile
+docker-compose.yml
