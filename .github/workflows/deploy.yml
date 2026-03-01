@@ -18,10 +18,10 @@ jobs:
       - name: Create .env file
         uses: SpicyPizza/create-envfile@v2.0.3
         with:
-          envkey_DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
-          envkey_SYMBOLS=${{ secrets.SYMBOLS }}
-          envkey_TIMEFRAME=${{ secrets.TIMEFRAME }}
-          envkey_RISK_PERCENT=${{ secrets.RISK_PERCENT }}
+          envkey_DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          envkey_SYMBOLS: ${{ secrets.SYMBOLS }}
+          envkey_TIMEFRAME: ${{ secrets.TIMEFRAME }}
+          envkey_RISK_PERCENT: ${{ secrets.RISK_PERCENT }}
 
       - name: Deploy with Docker Compose
         run: |
