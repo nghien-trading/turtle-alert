@@ -1,7 +1,7 @@
 import { validateEnv } from "../config/env";
 import { sendDiscordAlert } from "../discord/webhook";
 import { fetchMeta } from "../hyperliquid/api";
-import { calculateBollingerBands } from "../indicators/bb";
+import { calculateDonchianChannel } from "../indicators/donchian";
 import { calculateLeverage } from "../risk/leverage";
 import { calculateStopLoss, type Candle } from "../risk/sl";
 import { detectSignal } from "../signals/signals";
@@ -122,29 +122,26 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
         buffer.shift();
     }
 
-    // We need exactly 21 candles to have a "previous" candle and 20 closes to calculate BB for the previous candle.
-    // Actually wait: The BB is calculated on the last 20 closes.
-    // Signal condition: "Previous candle close < LowerBand"
-    // "Current candle close returns inside band"
-    // So we need 20 candles to calculate the BB of the PREVIOUS candle.
-    // Let's use the 20 candles BEFORE the current closed candle to determine the bands for the current closed candle.
+    // We need 21 candles: 20 to compute the Donchian Channel for the previous
+    // candle's bands, plus the candle that just closed as the "current" candle.
     if (buffer.length < 21) {
         return; // Need more data
     }
 
-    const prevCandles = buffer.slice(buffer.length - 21, buffer.length - 1);
-    const prevCandle = prevCandles[prevCandles.length - 1]; // the one before the currently closed one
-    const currCandle = buffer[buffer.length - 1]; // the one that just closed
+    // prevCandles: the 20 candles before the one that just closed.
+    // These determine the Donchian bands at the time of the previous candle.
+    const prevCandles = buffer.slice(buffer.length - 21, buffer.length - 1); // 20 items
+    const prevCandle = prevCandles[prevCandles.length - 1]!; // the one before the currently closed one
+    const currCandle = buffer[buffer.length - 1]!;           // the one that just closed
 
-    if (!prevCandle || !currCandle) return;
-
-    const pricesForBB = prevCandles.map(c => c.close);
-    const { sma, upper, lower } = calculateBollingerBands(pricesForBB);
+    // Donchian Channel on the 20-candle window.
+    // Uses high/low of each candle — no averaging, no std deviation.
+    const { upper, lower, middle } = calculateDonchianChannel(prevCandles);
 
     const signal = detectSignal({ close: prevCandle.close }, { close: currCandle.close }, lower, upper);
     if (!signal) return;
 
-    // We have a signal!
+    // We have a breakout signal!
     const sl = calculateStopLoss(signal, currCandle);
     const entryPrice = currCandle.close;
 
@@ -175,13 +172,13 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
                     inline: false
                 },
                 {
-                    name: "Indicators at Signal",
-                    value: `📊 **SMA:** ${sma.toFixed(4)}\n📈 **Upper BB:** ${upper.toFixed(4)}\n📉 **Lower BB:** ${lower.toFixed(4)}`,
+                    name: "Donchian Channel at Signal",
+                    value: `📈 **UpperBand:** ${upper.toFixed(4)}\n📉 **LowerBand:** ${lower.toFixed(4)}\n➖ **MiddleBand:** ${middle.toFixed(4)}`,
                     inline: false
                 },
                 {
                     name: "Mathematical Formulas Used",
-                    value: "```text\nBollinger Bands:\nSMA = (sum of last 20 closes) / 20\nStdDev = sqrt(sum((close[i] - SMA)^2) / 20)\nUpperBand = SMA + 2 * StdDev\nLowerBand = SMA - 2 * StdDev\n\nLeverage Limit:\nPriceDist = abs(Entry - SL)\nDist% = PriceDist / Entry\nValid if: Dist% < 1 / L\n```",
+                    value: "```text\nDonchian Channel (length 20):\nUpperBand  = max(high[i]) over last 20 candles\nLowerBand  = min(low[i])  over last 20 candles\nMiddleBand = (UpperBand + LowerBand) / 2\n\nLeverage Limit:\nPriceDist = abs(Entry - SL)\nDist% = PriceDist / Entry\nValid if: Dist% < 1 / L\n```",
                     inline: false
                 }
             ],
@@ -189,7 +186,6 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
         }]
     };
 
-    // sendDiscordAlert has been updated to accept `object` types for rich embeds under `src/discord/webhook.ts`
     await sendDiscordAlert(config.discordWebhookUrl, alertMsg as any);
     console.log(`Sent alert for ${coin} - ${signal}`);
 }
