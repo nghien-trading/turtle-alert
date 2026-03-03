@@ -142,7 +142,7 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
     if (!signal) return;
 
     // We have a breakout signal!
-    const sl = calculateStopLoss(signal, currCandle);
+    const sl = calculateStopLoss(signal, upper, lower);
     const entryPrice = currCandle.close;
 
     const leverageResult = calculateLeverage(entryPrice, sl, maxLev);
@@ -152,6 +152,7 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
     }
 
     const alertMsg = {
+        content: "@everyone", // Mention everyone in the channel
         embeds: [{
             title: "🚨 Turtle Signal Detected 🚨",
             color: signal === "LONG" ? 0x00FF00 : 0xFF0000,
@@ -163,22 +164,22 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
                 },
                 {
                     name: "Trade Setup",
-                    value: `🟢 **Entry:** ${entryPrice}\n🔴 **Stop Loss:** ${sl}\n📉 **Distance:** ${leverageResult.priceDistance.toFixed(4)} (${(leverageResult.distancePercent * 100).toFixed(2)}%)`,
+                    value: `🟢 **Entry:** ${entryPrice}\n🔴 **Stop Loss:** ${sl}\n📉 **PriceDistance:** ${leverageResult.priceDistance.toFixed(4)}\n📊 **DistancePercent:** ${(leverageResult.distancePercent * 100).toFixed(2)}%`,
                     inline: false
                 },
                 {
-                    name: "Leverage Details",
-                    value: `⚖️ **Max Allowed:** ${maxLev}x\n🚀 **Selected:** **${leverageResult.leverage}x**`,
-                    inline: false
-                },
-                {
-                    name: "Donchian Channel at Signal",
+                    name: "Donchian Channel",
                     value: `📈 **UpperBand:** ${upper.toFixed(4)}\n📉 **LowerBand:** ${lower.toFixed(4)}\n➖ **MiddleBand:** ${middle.toFixed(4)}`,
-                    inline: false
+                    inline: true
+                },
+                {
+                    name: "Leverage",
+                    value: `⚖️ **MaxLeverage:** ${maxLev}x\n🚀 **OptimalLeverage:** **${leverageResult.leverage}x**`,
+                    inline: true
                 },
                 {
                     name: "Mathematical Formulas Used",
-                    value: "```text\nDonchian Channel (length 20):\nUpperBand  = max(high[i]) over last 20 candles\nLowerBand  = min(low[i])  over last 20 candles\nMiddleBand = (UpperBand + LowerBand) / 2\n\nLeverage Limit:\nPriceDist = abs(Entry - SL)\nDist% = PriceDist / Entry\nValid if: Dist% < 1 / L\n```",
+                    value: "```text\nUpperBand = max(high[i]) over last 20 candles\nLowerBand = min(low[i]) over last 20 candles\nDistancePercent = abs(Entry - SL) / Entry\n\nLeverage Limit:\nValid if: DistancePercent < 1 / L\n```",
                     inline: false
                 }
             ],
@@ -186,7 +187,7 @@ async function handleCandleClose(coin: string, closedCandle: Candle, config: Ret
         }]
     };
 
-    await sendDiscordAlert(config.discordWebhookUrl, alertMsg as any);
+    await sendDiscordAlert(config.discordWebhookUrl, alertMsg);
     console.log(`Sent alert for ${coin} - ${signal}`);
 }
 
